@@ -1,5 +1,6 @@
 package cn.nukkit.network.protocol;
 
+import cn.nukkit.network.protocol.types.ModalFormCancelReason;
 import lombok.ToString;
 
 @ToString
@@ -9,7 +10,7 @@ public class ModalFormResponsePacket extends DataPacket {
 
     public int formId;
     public String data = "null";
-    public int cancelReason;
+    public ModalFormCancelReason cancelReason;
 
     @Override
     public byte pid() {
@@ -23,7 +24,7 @@ public class ModalFormResponsePacket extends DataPacket {
             this.data = this.getString();
         }
         if (this.getBoolean()) {
-            this.cancelReason = this.getByte();
+            this.cancelReason = ModalFormCancelReason.values()[this.getByte()];
         }
     }
 

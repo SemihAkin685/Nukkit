@@ -30,9 +30,12 @@ import cn.nukkit.event.player.PlayerInteractEvent.Action;
 import cn.nukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import cn.nukkit.event.server.DataPacketReceiveEvent;
 import cn.nukkit.event.server.DataPacketSendEvent;
-import cn.nukkit.form.handler.FormResponseHandler;
-import cn.nukkit.form.window.FormWindow;
-import cn.nukkit.form.window.FormWindowCustom;
+import cn.nukkit.form.element.custom.*;
+import cn.nukkit.form.response.CustomResponse;
+import cn.nukkit.form.response.ElementResponse;
+import cn.nukkit.form.response.Response;
+import cn.nukkit.form.window.CustomForm;
+import cn.nukkit.form.window.Form;
 import cn.nukkit.inventory.*;
 import cn.nukkit.inventory.transaction.*;
 import cn.nukkit.inventory.transaction.action.InventoryAction;
@@ -250,8 +253,11 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
     private boolean canPickupXP = true;
 
     protected int formWindowCount;
-    protected Map<Integer, FormWindow> formWindows = new Int2ObjectOpenHashMap<>();
-    protected Map<Integer, FormWindow> serverSettings = new Int2ObjectOpenHashMap<>();
+
+    @Getter
+    protected Map<Integer, Form<?>> formWindows = new Int2ObjectOpenHashMap<>();
+    @Getter
+    protected Map<Integer, Form<?>> serverSettings = new Int2ObjectOpenHashMap<>();
 
     protected Map<Long, DummyBossBar> dummyBossBars = new Long2ObjectLinkedOpenHashMap<>();
 
@@ -3554,32 +3560,44 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
                     return;
                 }
 
-                ModalFormResponsePacket modalFormPacket = (ModalFormResponsePacket) packet;
-
-                if (formWindows.containsKey(modalFormPacket.formId)) {
-                    FormWindow window = formWindows.remove(modalFormPacket.formId);
-                    window.setResponse(modalFormPacket.data.trim());
-
-                    for (FormResponseHandler handler : window.getHandlers()) {
-                        handler.handle(this, modalFormPacket.formId);
-                    }
-
-                    PlayerFormRespondedEvent event = new PlayerFormRespondedEvent(this, modalFormPacket.formId, window);
-                    getServer().getPluginManager().callEvent(event);
-                } else if (serverSettings.containsKey(modalFormPacket.formId)) {
-                    FormWindow window = serverSettings.get(modalFormPacket.formId);
-                    window.setResponse(modalFormPacket.data.trim());
-
-                    for (FormResponseHandler handler : window.getHandlers()) {
-                        handler.handle(this, modalFormPacket.formId);
-                    }
-
-                    PlayerSettingsRespondedEvent event = new PlayerSettingsRespondedEvent(this, modalFormPacket.formId, window);
-                    getServer().getPluginManager().callEvent(event);
-
-                    if (!event.isCancelled() && window instanceof FormWindowCustom)
-                        ((FormWindowCustom) window).setElementsFromResponse();
+                ModalFormResponsePacket modalFormResponsePacket = (ModalFormResponsePacket) packet;
+                if(modalFormResponsePacket.data.length() > 1024) {
+                    this.close("§cPacket handling error");
+                    return;
                 }
+
+                if (this.getFormWindows().containsKey(modalFormResponsePacket.formId)) {
+                    Form<?> window = getFormWindows().remove(modalFormResponsePacket.formId);
+
+                    Response response = window.respond(this, modalFormResponsePacket.data.trim(), modalFormResponsePacket.cancelReason);
+
+                    PlayerFormRespondedEvent event = new PlayerFormRespondedEvent(this, modalFormResponsePacket.formId, window, response);
+                    this.getServer().getPluginManager().callEvent(event);
+                } else if (this.getServerSettings().containsKey(modalFormResponsePacket.formId)) {
+                    Form<?> window = this.getServerSettings().get(modalFormResponsePacket.formId);
+
+                    Response response = window.respond(this, modalFormResponsePacket.data.trim(), modalFormResponsePacket.cancelReason);
+
+                    PlayerSettingsRespondedEvent event = new PlayerSettingsRespondedEvent(this, modalFormResponsePacket.formId, window, response);
+                    this.getServer().getPluginManager().callEvent(event);
+
+                    // Apply responses as default settings
+                    if (!event.isCancelled() && window instanceof CustomForm customForm && response != null) {
+                        ((CustomResponse) response).getResponses().forEach((i, res) -> {
+                            ElementCustom e = customForm.elements().get(i);
+                            switch (e) {
+                                case ElementDropdown dropdown -> dropdown.defaultOption(((ElementResponse) res)
+                                        .elementId());
+                                case ElementInput input -> input.defaultText(String.valueOf(res));
+                                case ElementSlider slider -> slider.defaultValue((Float) res);
+                                case ElementToggle toggle -> toggle.defaultValue((Boolean) res);
+                                case ElementStepSlider stepSlider -> stepSlider.defaultStep(((ElementResponse) res)
+                                        .elementId());
+                                default -> log.warn("Illegal element {} within ServerSettings", e);
+                            }
+                        });
+                    }
+                } else log.warn("{} sent unknown form id {}", this.getName(), modalFormResponsePacket.formId);
 
                 return;
             case ProtocolInfo.INTERACT_PACKET:
@@ -3853,22 +3871,23 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
 
                     this.resetCraftingGridType();
                     this.addWindow(this.craftingGrid, ContainerIds.NONE);
-                    ContainerClosePacket pk = new ContainerClosePacket();
-                    pk.windowId = -1;
-                    pk.wasServerInitiated = false;
-                    this.dataPacket(pk);
+                    ContainerClosePacket nCpk = new ContainerClosePacket();
+                    nCpk.windowId = -1;
+                    nCpk.wasServerInitiated = false;
+                    this.dataPacket(nCpk);
                 } else if (this.windowIndex.containsKey(containerClosePacket.windowId)) {
                     this.inventoryOpen = false;
                     Inventory inn = this.windowIndex.get(containerClosePacket.windowId);
                     this.server.getPluginManager().callEvent(new InventoryCloseEvent(inn, this));
                     this.closingWindowId = containerClosePacket.windowId;
+                    assert inn != null;
                     this.removeWindow(inn, true);
                     this.closingWindowId = Integer.MIN_VALUE;
                 } else { // Close the bugged inventory client refused with id -1 above
-                    ContainerClosePacket pk = new ContainerClosePacket();
-                    pk.windowId = containerClosePacket.windowId;
-                    pk.wasServerInitiated = false;
-                    this.dataPacket(pk);
+                    ContainerClosePacket cPk = new ContainerClosePacket();
+                    cPk.windowId = containerClosePacket.windowId;
+                    cPk.wasServerInitiated = false;
+                    this.dataPacket(cPk);
                 }
                 return;
             case ProtocolInfo.BLOCK_ENTITY_DATA_PACKET:
@@ -4651,7 +4670,7 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
                     settingsRequestEvent.getSettings().forEach((id, window) -> {
                         ServerSettingsResponsePacket re = new ServerSettingsResponsePacket();
                         re.formId = id;
-                        re.data = window.getJSONData();
+                        re.data = window.toJson();
                         this.dataPacket(re);
                     });
                 }
@@ -4842,6 +4861,68 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
                 }
                 return;
         }
+    }
+
+    /**
+     * Sends a form to a player and assigns the next ID to it
+     * To open a form safely, please use {@link Form#send(Player)}
+     *
+     * @param form The form to open
+     * @return The id assigned to the form
+     */
+    public int sendForm(Form<?> form) {
+        return this.sendForm(form, this.formWindowCount++);
+    }
+
+    /**
+     * Sends a form to a player and assigns a given ID to it
+     * To open a form safely, please use {@link Form#send(Player)}
+     *
+     * @param form The form to open
+     * @param id   The ID to assign the form to
+     * @return The id assigned to the form
+     */
+    public int sendForm(Form<?> form, int id) {
+        if (this.formWindows.size() > 10) {
+            this.kick("Server sent to many forms. Please ");
+            return id;
+        }
+
+        if (!form.isViewer(this)) {
+            form.viewers().add(this);
+        }
+
+        ModalFormRequestPacket packet = new ModalFormRequestPacket();
+        packet.formId = id;
+        packet.data = form.toJson();
+
+        this.formWindows.put(packet.formId, form);
+
+        this.dataPacket(packet);
+        return id;
+    }
+
+    public void updateForm(Form<?> form) {
+        if (!form.isViewer(this)) {
+            return;
+        }
+
+        this.formWindows.entrySet()
+                .stream()
+                .filter(f -> f.getValue().equals(form))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .ifPresent(id -> {
+                    ServerSettingsResponsePacket packet = new ServerSettingsResponsePacket(); // Exploiting some (probably unintended) protocol features here
+                    packet.formId = id;
+                    packet.data = form.toJson();
+
+                    this.dataPacket(packet);
+                });
+    }
+
+    public void checkClosedForms() {
+        this.formWindows.entrySet().removeIf(entry -> !entry.getValue().isViewer(this));
     }
 
     private boolean handleQuickCraft(InventoryTransactionPacket packet, List<InventoryAction> actions, InventoryTransaction transaction) {
@@ -6281,35 +6362,6 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
         this.teleport(location, null);
     }
 
-    /**
-     * Shows a new FormWindow to the player
-     * You can find out FormWindow result by listening to PlayerFormRespondedEvent
-     *
-     * @param window to show
-     * @return form id to use in {@link PlayerFormRespondedEvent}
-     */
-    public int showFormWindow(FormWindow window) {
-        return showFormWindow(window, this.formWindowCount++);
-    }
-
-    /**
-     * Shows a new FormWindow to the player
-     * You can find out FormWindow result by listening to PlayerFormRespondedEvent
-     *
-     * @param window to show
-     * @param id form id
-     * @return form id to use in {@link PlayerFormRespondedEvent}
-     */
-    public int showFormWindow(FormWindow window, int id) {
-        if (formOpen) return -1;
-        ModalFormRequestPacket packet = new ModalFormRequestPacket();
-        packet.formId = id;
-        packet.data = window.getJSONData();
-        this.formWindows.put(packet.formId, window);
-        this.dataPacket(packet);
-        this.formOpen = true;
-        return id;
-    }
 
     /**
      * Shows a new setting page in game settings
@@ -6318,7 +6370,7 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
      * @param window to show on settings page
      * @return form id to use in {@link PlayerFormRespondedEvent}
      */
-    public int addServerSettings(FormWindow window) {
+    public int addServerSettings(Form<?> window) {
         int id = this.formWindowCount++;
 
         this.serverSettings.put(id, window);

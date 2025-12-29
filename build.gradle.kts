@@ -1,9 +1,9 @@
 import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer
-import org.gradle.internal.impldep.org.junit.experimental.categories.Categories.CategoryFilter.exclude
 
 @Suppress("DSL_SCOPE_VIOLATION") // https://youtrack.jetbrains.com/issue/IDEA-262280
 
 plugins {
+    kotlin("jvm")
     id("java-library")
     id("maven-publish")
     id("application")
@@ -56,11 +56,12 @@ dependencies {
     testImplementation(libs.bundles.junit)
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 

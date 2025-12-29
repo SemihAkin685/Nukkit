@@ -1,24 +1,43 @@
 package cn.nukkit.form.element;
 
+import cn.nukkit.form.element.custom.ElementCustom;
+import cn.nukkit.form.element.simple.ElementSimple;
+import com.google.gson.JsonObject;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
-public class ElementDivider extends Element implements SimpleElement {
+@Getter
+@Setter
+@Accessors(chain = true, fluent = true)
+@AllArgsConstructor
+public class ElementDivider extends Element implements ElementCustom, ElementSimple {
+    private String text;
 
-    @SuppressWarnings("unused")
-    private final String type = "divider";
-    @Getter
-    @Setter
-    private String text = "";
-
-    /**
-     * Element divider (1.21.70+)
-     */
     public ElementDivider() {
         this("");
     }
 
-    public ElementDivider(String text) {
-        this.text = text;
+    @Override
+    public JsonObject toJson() {
+        this.object.addProperty("type", "divider");
+        this.object.addProperty("text", this.text);
+
+        return this.object;
+    }
+
+    @Override
+    public ElementSimple updateWith(ElementSimple element) {
+        if (!(element instanceof ElementDivider divider)) {
+            return this;
+        }
+
+        return this.text(divider.text());
+    }
+
+    @Override
+    public boolean hasResponse() {
+        return false;
     }
 }

@@ -1,20 +1,43 @@
 package cn.nukkit.form.element;
 
-public class ElementLabel extends Element implements SimpleElement {
+import cn.nukkit.form.element.custom.ElementCustom;
+import cn.nukkit.form.element.simple.ElementSimple;
+import com.google.gson.JsonObject;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 
-    @SuppressWarnings("unused")
-    private final String type = "label"; //This variable is used for JSON import operations. Do NOT delete :) -- @Snake1999
-    private String text = "";
+@Getter
+@Setter
+@Accessors(chain = true, fluent = true)
+@AllArgsConstructor
+public class ElementLabel extends Element implements ElementCustom, ElementSimple {
+    private String text;
 
-    public ElementLabel(String text) {
-        this.text = text;
+    public ElementLabel() {
+        this("");
     }
 
-    public String getText() {
-        return text;
+    @Override
+    public JsonObject toJson() {
+        this.object.addProperty("type", "label");
+        this.object.addProperty("text", this.text);
+
+        return this.object;
     }
 
-    public void setText(String text) {
-        this.text = text;
+    @Override
+    public ElementSimple updateWith(ElementSimple element) {
+        if (!(element instanceof ElementLabel label)) {
+            return this;
+        }
+
+        return this.text(label.text());
+    }
+
+    @Override
+    public boolean hasResponse() {
+        return false;
     }
 }
