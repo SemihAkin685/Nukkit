@@ -495,7 +495,6 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
      * Set allow flight adventure setting
      * @param value allow flight enabled
      */
-    @Deprecated
     public void setAllowFlight(boolean value) {
         this.adventureSettings.set(Type.ALLOW_FLIGHT, value);
         this.adventureSettings.update();
@@ -505,7 +504,6 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
      * Check wether allow flight adventure setting is enabled
      * @return allow flight enabled
      */
-    @Deprecated
     public boolean getAllowFlight() {
         return this.adventureSettings.get(Type.ALLOW_FLIGHT);
     }
@@ -885,7 +883,7 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
     void updatePlayerListData(boolean onlyWhenSpawned) {
         if (this.spawned || !onlyWhenSpawned) {
             this.server.updatePlayerListData(
-                    new PlayerListPacket.Entry(this.getUniqueId(), this.getId(), this.displayName, this.getSkin(), this.loginChainData.getXUID(), this.getLocatorBarColor()),
+                    new PlayerListPacket.Entry(this.getUniqueId(), this.getId(), this.displayName, this.getSkin(), this.getXuid(), this.getLocatorBarColor()),
                     this.server.playerList.values().toArray(new Player[0]));
         }
     }
@@ -1371,21 +1369,6 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
             this.server.batchPackets(new Player[]{this}, new DataPacket[]{dataPacket});
         }
         return true;
-    }
-
-    @Deprecated
-    public int dataPacket(DataPacket packet, boolean needACK) {
-        return this.dataPacket(packet) ? 1 : 0;
-    }
-
-    @Deprecated
-    public boolean directDataPacket(DataPacket packet) {
-        return this.dataPacket(packet);
-    }
-
-    @Deprecated
-    public int directDataPacket(DataPacket packet, boolean needACK) {
-        return this.directDataPacket(packet) ? 1 : 0;
     }
 
     public void forceDataPacket(DataPacket packet, Runnable callback) {
@@ -7337,7 +7320,7 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
         this.dataPacket(new ClientboundCloseFormPacket());
     }
 
-    public String getXUID() {
+    public String getXuid() { //valid getter for kotlin
         return this.loginChainData.getXUID();
     }
 

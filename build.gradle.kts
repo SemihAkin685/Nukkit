@@ -106,21 +106,25 @@ tasks {
     }
 
     jar {
-        archiveClassifier.set("dev")
+        enabled = false
     }
 
     shadowJar {
-        manifest.attributes["Multi-Release"] = "true"
+        archiveFileName.set("erilanukkit.jar")
+        archiveClassifier.set("")
+
+        manifest {
+            attributes["Multi-Release"] = "true"
+        }
 
         transform(Log4j2PluginsCacheFileTransformer())
 
-        // Backwards compatible jar directory
+        mergeServiceFiles()
+
         destinationDirectory.set(file("$projectDir/target"))
-        archiveClassifier.set("")
 
         exclude("javax/annotation/**")
 
-        // These platforms are not popular, make the jar a bit smaller by not including optional Snappy support
         exclude("org/xerial/snappy/native/AIX/**")
         exclude("org/xerial/snappy/native/FreeBSD/**")
         exclude("org/xerial/snappy/native/SunOS/**")
@@ -129,15 +133,6 @@ tasks {
         exclude("org/xerial/snappy/native/Linux/ppc64/**")
         exclude("org/xerial/snappy/native/Linux/ppc64le/**")
         exclude("org/xerial/snappy/native/Linux/s390x/**")
-    }
-
-    runShadow {
-        val dir = File(projectDir, "run")
-        if (!dir.exists()) {
-            dir.mkdirs()
-        }
-        standardInput = System.`in`
-        workingDir = dir
     }
 
     javadoc {

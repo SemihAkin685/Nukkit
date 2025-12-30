@@ -4,7 +4,6 @@ import cn.nukkit.form.element.Element;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -15,7 +14,6 @@ import java.util.List;
 @Getter
 @Setter
 @Accessors(chain = true, fluent = true)
-@AllArgsConstructor
 public class ElementDropdown extends Element implements ElementCustom {
 
     protected String text;
@@ -39,8 +37,15 @@ public class ElementDropdown extends Element implements ElementCustom {
         this(text, options, 0, null);
     }
 
-    public ElementDropdown(String text, List<String> options, String tooltip) {
-        this(text, options, 0, tooltip);
+    public ElementDropdown(String text, List<String> options, int defaultOption) {
+        this(text, options, defaultOption, null);
+    }
+
+    public ElementDropdown(String text, List<String> options, int defaultOption, String tooltip) {
+        this.text = text;
+        this.options = options;
+        this.defaultOption = defaultOption;
+        this.tooltip = tooltip;
     }
 
     public ElementDropdown addOption(String option) {

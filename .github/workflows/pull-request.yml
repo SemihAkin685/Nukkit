@@ -14,7 +14,7 @@ jobs:
       - name: SetupJDK
         uses: actions/setup-java@v4
         with:
-          java-version: 8
+          java-version: 21
           distribution: 'temurin'
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v3
@@ -30,4 +30,4 @@ jobs:
         if: success()
         with:
           name: Nukkit
-          path: target/nukkit-1.0-SNAPSHOT.jar
+          path: target/erilanukkit.jar
