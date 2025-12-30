@@ -8,6 +8,9 @@ import cn.nukkit.utils.TextFormat;
 
 import java.util.Random;
 
+/**
+ * @author SemihAkin685
+ */
 public class WorldGenerateCommand extends VanillaCommand {
 
     public WorldGenerateCommand(String name) {
