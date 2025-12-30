@@ -2593,7 +2593,7 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
     protected void processLogin() {
         String lowerName = this.iusername;
         if (!this.server.isWhitelisted(lowerName)) {
-            this.kick(PlayerKickEvent.Reason.NOT_WHITELISTED, "Server is white-listed");
+            this.kick(PlayerKickEvent.Reason.NOT_WHITELISTED, "§c§l»§r§c Sunucularımız, ErilaNetwork V2 güncellemesi sebebi ile bakımdadır. Daha fazla bilgi için;\n\n§c§l»§r§c DISCORD:§4 https://discord.gg/evPxn5r2Jd\n§c§l»§r§c INSTAGRAM:§4 @erilanetwork", false);
             return;
         } else if (this.isBanned()) {
             String reason = this.server.getNameBans().getEntires().get(lowerName).getReason();
@@ -5395,8 +5395,7 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
         if (this.connected && !this.closed) {
             if (notify && !reason.isEmpty()) {
                 DisconnectPacket pk = new DisconnectPacket();
-                // New disconnection screen doesn't support colors :(
-                pk.message = TextFormat.clean(reason);
+                pk.message = reason;
                 this.forceDataPacket(pk, null);
             }
 
