@@ -1,6 +1,8 @@
 package cn.nukkit.block;
 
 import cn.nukkit.Player;
+import cn.nukkit.Server;
+import cn.nukkit.event.block.BlockPhysicsBreakEvent;
 import cn.nukkit.event.block.BlockRedstoneEvent;
 import cn.nukkit.event.redstone.RedstoneUpdateEvent;
 import cn.nukkit.item.Item;
@@ -193,7 +195,11 @@ public class BlockRedstoneWire extends BlockFlowable {
         }
 
         if (type == Level.BLOCK_UPDATE_NORMAL && !canStayOnFullSolid(this.down())) {
-            this.getLevel().useBreakOn(this);
+            BlockPhysicsBreakEvent event = new BlockPhysicsBreakEvent(this, type);
+            Server.getInstance().getPluginManager().callEvent(event);
+            if (!event.isCancelled()) {
+                this.getLevel().useBreakOn(this);
+            }
             return Level.BLOCK_UPDATE_NORMAL;
         }
 

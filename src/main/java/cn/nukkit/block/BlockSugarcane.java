@@ -3,6 +3,7 @@ package cn.nukkit.block;
 import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.event.block.BlockGrowEvent;
+import cn.nukkit.event.block.BlockPhysicsBreakEvent;
 import cn.nukkit.item.Item;
 import cn.nukkit.item.ItemDye;
 import cn.nukkit.level.Level;
@@ -90,14 +91,18 @@ public class BlockSugarcane extends BlockFlowable {
 
     @Override
     public int onUpdate(int type) {
+        Block down = this.down();
         if (type == Level.BLOCK_UPDATE_NORMAL) {
-            Block down = this.down();
             if (down.isTransparent() && down.getId() != SUGARCANE_BLOCK) {
-                this.getLevel().useBreakOn(this);
+                BlockPhysicsBreakEvent event = new BlockPhysicsBreakEvent(this, type);
+                Server.getInstance().getPluginManager().callEvent(event);
+                if (!event.isCancelled()) {
+                    this.getLevel().useBreakOn(this);
+                }
                 return Level.BLOCK_UPDATE_NORMAL;
             }
         } else if (type == Level.BLOCK_UPDATE_RANDOM) {
-            if (this.down().getId() != SUGARCANE_BLOCK) {
+            if (down.getId() != SUGARCANE_BLOCK) {
                 if (this.getDamage() == 0x0F) {
                     for (int y = 1; y < 3; ++y) {
                         Block b = this.getLevel().getBlock((int) this.x, (int) this.y + y, (int) this.z);

@@ -4,6 +4,7 @@ import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.entity.Entity;
 import cn.nukkit.event.block.BlockGrowEvent;
+import cn.nukkit.event.block.BlockPhysicsBreakEvent;
 import cn.nukkit.event.entity.EntityDamageByBlockEvent;
 import cn.nukkit.event.entity.EntityDamageEvent.DamageCause;
 import cn.nukkit.item.Item;
@@ -84,19 +85,26 @@ public class BlockCactus extends BlockTransparentMeta {
 
     @Override
     public int onUpdate(int type) {
+        Block down = this.down();
         if (type == Level.BLOCK_UPDATE_NORMAL) {
-            Block down = down();
-            if (down.getId() != SAND && down.getId() != CACTUS) {
-                this.getLevel().useBreakOn(this);
-            } else {
-                for (BlockFace side : BlockFace.Plane.HORIZONTAL) {
-                    if (!getSide(side).canBeFlowedInto()) {
-                        this.getLevel().useBreakOn(this);
-                    }
+            boolean invalidDown = down.getId() != SAND && down.getId() != CACTUS;
+            boolean invalidSide = false;
+            for (BlockFace side : BlockFace.Plane.HORIZONTAL) {
+                if (!getSide(side).canBeFlowedInto()) {
+                    invalidSide = true;
+                    break;
                 }
             }
+            if (invalidDown || invalidSide) {
+                BlockPhysicsBreakEvent event = new BlockPhysicsBreakEvent(this, type);
+                Server.getInstance().getPluginManager().callEvent(event);
+                if (!event.isCancelled()) {
+                    this.getLevel().useBreakOn(this);
+                }
+                return Level.BLOCK_UPDATE_NORMAL;
+            }
         } else if (type == Level.BLOCK_UPDATE_RANDOM) {
-            if (down().getId() != CACTUS) {
+            if (down.getId() != CACTUS) {
                 if (this.getDamage() == 0x0F) {
                     FullChunk chunk = this.level.getChunk((int) x >> 4, (int) z >> 4);
                     for (int y = 1; y < 3; ++y) {
